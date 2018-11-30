@@ -33,7 +33,7 @@ from PIL import Image
 import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
-#from reproject import reproject_interp
+from reproject import reproject_interp
 
 import cosmics
 from context import LoadingBar
