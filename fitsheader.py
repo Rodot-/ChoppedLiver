@@ -48,4 +48,4 @@ for filename in args.files:
 			else:
 				print header.__repr__()
 	except Exception as e:
-		print>>sys.stderr, e
+		print>>sys.stderr, "Error in file \"%s\":" % os.path.basename(filename) ,e
