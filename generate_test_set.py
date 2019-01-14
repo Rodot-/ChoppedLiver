@@ -33,18 +33,21 @@ from PIL import Image
 import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
-from reproject import reproject_interp
+#from reproject import reproject_interp
 
 import cosmics
 from context import LoadingBar
 
+# These must be set by the user
+DATA_DIR = '../ISIS_scripts/data/clean' # This is where we put our cleaned images
+MASK_DIR = '../ISIS_scripts/data/mask' # This is where we put our image masks
+ISIS_DIR = '../ISIS_scripts/package' # This is the ISIS installation directory
+RAW_DATA_DIR = '../ISIS_scripts/optical-data/fits_files' # this is where the original fits images are
+
+
 INTERPOLATION = Image.BICUBIC # slowest but best rotation interp
 DATA_FILE = 'cleandatatable.dat' # this will be created
-RAW_DATA_DIR = 'optical-data/fits_files' # this is where the original fits images are
-DATA_DIR = 'data/clean' # This is where we put our cleaned images
-MASK_DIR = 'data/mask' # This is where we put our image masks
 TARGET_DIR = 'optical_reduction' # This is the directory containing our ISIS directories
-ISIS_DIR = 'package' # This is the ISIS installation directory
 DATES_FILE = os.path.join(TARGET_DIR, 'register2', 'dates') # depricated
 DEFAULT_KEYS = ("FILENAME", 
 				"MJD", # Date
@@ -53,6 +56,9 @@ DEFAULT_KEYS = ("FILENAME",
 				"ROTSKYPA" # Rotation angle on the sky
 				)
 
+# This should be a more sophisticated function that gets 
+# observation numbers from a data table
+# right now we're only working on obs_1
 SELECT = lambda row: row['OBSID'] == 'OBS_1'
 
 def mkdir(directory, clear=False):
@@ -68,6 +74,8 @@ def setup_ISIS(run_name, **kwargs):
 
 	register_dir = os.path.join(TARGET_DIR, 'register_{}'.format(run_name))
 	images_dir = os.path.join(TARGET_DIR, 'images_{}'.format(run_name))
+
+	mkdir(TARGET_DIR)
 	
 	mkdir(register_dir)
 	print "created {}".format(register_dir)
