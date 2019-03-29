@@ -48,10 +48,25 @@ def write_out(hdu, filename):
 
 	hdu.writeto(filename, overwrite=True)
 
+def usage():
+
+	msg = """reproject_image -t TEMPLATE -o OUTFILE [-e] IMAGEFILE
+	
+-t TEMPLATE           Template Image In WCS Frame To Transform To
+-o OUTFILE            Name of Output File
+-e                    Use Flux Conserving Reprojection (Slow)
+-h                    This Message
+"""
+	print(msg)
+	exit(0)
+
 def main():
 
-	opts, args = getopt.getopt(sys.argv[1:], 't:o:e')
+	opts, args = getopt.getopt(sys.argv[1:], 't:o:eh')
 	opts = dict(opts)
+
+	if '-h' in opts:
+		usage()
 
 	assert '-t' in opts, "Please Provide a Template Image (-t TEMPLATE)"
 	assert len(args), "Please Provide Image(s) to Reproject"
