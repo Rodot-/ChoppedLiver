@@ -50,10 +50,11 @@ def write_out(hdu, filename):
 
 def usage():
 
-	msg = """reproject_image -t TEMPLATE -o OUTFILE [-e] IMAGEFILE
+	msg = """reproject_image -t TEMPLATE -o OUTFILE [-m MASKFILE] [-e] IMAGEFILE
 	
 -t TEMPLATE           Template Image In WCS Frame To Transform To
 -o OUTFILE            Name of Output File
+-m MASKFILE           Name of Reprojection Footprint Mask File
 -e                    Use Flux Conserving Reprojection (Slow)
 -h                    This Message
 """
@@ -62,7 +63,7 @@ def usage():
 
 def main():
 
-	opts, args = getopt.getopt(sys.argv[1:], 't:o:eh')
+	opts, args = getopt.getopt(sys.argv[1:], 't:o:m:eh')
 	opts = dict(opts)
 
 	if '-h' in opts:
@@ -79,7 +80,11 @@ def main():
 
 	image, mask = reproject(template, imagename, exact=is_exact)
 	write_out(image, outfile)
-		
+	
+	if '-m' in opts:
+		maskfile = opts['-m']
+		write_out(mask, maskfile)
+	
 if __name__ == '__main__':
 
 	main()	
