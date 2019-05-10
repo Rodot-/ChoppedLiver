@@ -1,0 +1,6 @@
+Todo list
+
+Date: 20190510
+Add a script that verifies the output of the run_clean images
+	the script should check for zeros, negative values, and non-finite values
+
