@@ -43,3 +43,6 @@ Determine good logging methods for changes to ISIS subtract runs
 Create a directory somewhere containing resources such as pdfs, links, etc
 	Having a perminant reference to these resources will be helpful for keeping us all on the same page
 Determine PSF fits to LiverPool images to get better estiamtes of gaussian widths in ISIS
+test run_clean for use with arbitrary file lists
+	also add in some assertions to make sure files exist, etc
+	and maybe change the name to run_prep instead since run_clean might be confusing with radio data
