@@ -1,6 +1,41 @@
 Todo list
+# Format Specification:
+# Motivation:
+#   Create a simple and human readable todo list
+#	that documents our progress and goals of teh project
+#   The format is laid out such that the file is easy to 
+#   parse with basic command line tools
+#   The previous entry description always describes the current entry
+# Octothorp (#) charaters denote comments
+# Each element of the list should adhere to the following format
+#
+# Date: ISO %Y%m%d # Required, date of entry, dates may repeat, this represents the start of an entry, must be first item
+# Status: ISO %Y%m%d/Incomplete/None # Required, status of the sub entry (None for ambiguous or general reminders, date for date of completion)
+# By: ISO %Y%m%d/None # optional, date that activity needs to be completed by, may be used multiple times
+# User: Name # Required, name of person making the entry, may be used multiple times
+# Descriptions of things to do, no strict requirements
+#	Indents used for grouping, no strict requirements
+#
+# Example Entry:
+# 
+# Date: 20190510
+# Status: 20190510
+# By: 20190510
+# User: Jack
+# Create and document a todo list file
+# 	add in example of an entry
+#   explain motivation for file creation
+# Status: Incomplete
+# Create parser to todo list to add reminders for users 
+#
+#
 
 Date: 20190510
+Status: Incomplete
+User: Jack
+By: None
 Add a script that verifies the output of the run_clean images
 	the script should check for zeros, negative values, and non-finite values
+Create an overleaf document to keep track of parameter changes with ISIS
+Determine good logging methods for changes to ISIS subtract runs
 
