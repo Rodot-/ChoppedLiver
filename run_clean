@@ -1,16 +1,65 @@
 #!/usr/bin/env bash
 
-BASEDIR=obs0_data
-#RAWDIR=$BASEDIR/raw
-FOOTPRINTDIR=$BASEDIR/footprints
-MASKDIR=$BASEDIR/masks
-TEMPDIR=$BASEDIR/temp
-CORRECTEDDIR=$BASEDIR/corrected
-TEMPLATE="$(cat obs_0.dat | head -n 1)" # can be set
-OBJECTS="$(cat obs_0.dat)"
+#First, let's set up some default args
+
+RAWDIR=. # This will be our default dir for our original (ro) data files
+OBSFILE=obs_0.dat # a test file containing the file locations of images in a field
+BASEDIR=obs0_data # the data directory we'll be working with
+TEMPLATE= # template image for alignment
+# next, we'll impliment a command line interface
+
+while [ "$1" != "" ]; do
+	case $1 in
+		-b | --basedir )	shift
+							BASEDIR=$1
+							;;
+		-f | --obsfile )	shift
+							OBSFILE=$1
+							;;
+		-r | --rawdir )		shift
+							RAWDIR=$1
+							;;			
+		-t | --template ) 	shift
+							TEMPLATE=$1
+							;;
+		* )					exit 1
+	esac
+	shift
+done
+
+# Now we can setup some directories
+
+FOOTPRINTDIR=$BASEDIR/footprints # a place to store our reprojection footprint masks
+MASKDIR=$BASEDIR/masks # a place to store our cosmic ray removal masks
+TEMPDIR=$BASEDIR/temp # a temp dir for intermediate steps
+CORRECTEDDIR=$BASEDIR/corrected # a directory to put our completed, corrected images
+
+if [ ! -d $FOOTPRINTDIR ]; then
+	mkdir -p $FOOTPRINTDIR
+fi
+
+if [ ! -d $MASKDIR ]; then
+	mkdir -p $MASKDIR
+fi
+
+if [ ! -d $TEMPDIR ]; then
+	mkdir -p $TEMPDIR
+fi
+
+if [ ! -d $CORRECTEDDIR ]; then
+	mkdir -p $CORRECTEDDIR
+fi
+
+# make sure we have a template image, if not, get the first one
+if [ -z "$TEMPLATE" ]; then
+	TEMPLATE="$RAWDIR/$(cat $OBSFILE | head -n 1)" # can be set
+fi
+
+OBJECTS="$(cat $OBSFILE)" # get the locations of all of our objects
 
 for image in $OBJECTS
 do
+	image=$RAWDIR/$image # set the relative location of the image file
 	if [ -f $image ]; then
 		BASENAME=${image##*/} # basename of raw image
 		IMAGENAME=${BASENAME%%.fits} # imagename without extension
