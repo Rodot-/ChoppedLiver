@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+
+'''
+master_crop - create binary mask file of largest area rectangle encompassing bitwise and of input boolean masks.
+
+Author: Jack O'Brien
+Created: 20190405
+Modified: 20190410
+'''
+import sys
+import getopt
+
+import numpy as np
+import operator
+from astropy.io import fits
+
+VERBOSE = False
+
+def printv(*args, **kwargs):
+	global VERBOSE
+	if VERBOSE:
+		print(*args, **kwargs)
+
+def get_master_mask(m, *masks):
+	'''Get the mask corresponding to the
+	location where all input masks are true  
+	bitwise and combinations of all input masks
+	'''
+
+	mask = np.ones(m.shape, dtype=m.dtype)
+	for m in masks:
+		mask &= m
+	return mask
+
+def largest_histogram(hist):
+	'''I got this from stackoverflow, lookup
+    largest rectangle under histogram for algorithm
+    finding largest area  i extrapolated the largest
+	rectangle edges from this code
+	'''
+
+	ans = 0
+	A = [-1] + list(hist)
+	A.append(-1)
+	n = len(A)
+	stack = [0] # store index
+	idx = (0,0)
+	for i in range(n):
+		while A[i] < A[stack[-1]]:
+			h = A[stack.pop()]
+			area = h*(i-stack[-1]-1)
+			if area > ans:
+				ans = area
+				idx = (i-2, stack[-1]) # bottom, top
+			ans = max(ans, area)
+		stack.append(i)
+	return ans, idx
+
+def get_mask_bounds(mask):
+	'''get the pixel coordinates of the
+	top, left, bottom, and right of the
+	rectangular mask area
+	'''
+
+	F = np.zeros_like(mask).astype(np.uint16)
+	m, n = mask.shape
+	area = 0
+	index = None
+	right = 0
+	top = 0
+
+	m = np.where(mask[:, 0])[0]
+	F[m, 0] = 1	
+
+	for x in range(1, n):
+		m = np.where(mask[:, x])[0]
+		F[m, x] = (1 + F[m, x-1])
+
+	for x in range(n):
+		a, idx = largest_histogram(F[:,x])
+		if a >= area:
+			area = a
+			bottom, top = idx
+			right = x
+
+	for i in range(right+1):
+		if F[top][right-i] == 0:
+			left = right-i
+			break
+	else:
+		left = -1
+
+	return top, left+1, bottom+1, right+1
+
+def get_boundary_mask(mask):
+	''' get largest rectangle within binary mask
+	and return it as a binary mask of the same shape
+	'''
+
+	top, left, bottom, right = get_mask_bounds(mask)
+	bmask = np.zeros(mask.shape, dtype=mask.dtype)
+	bmask[top:bottom, left:right] = 1
+
+	lost = list(bmask.ravel()).count(0)
+	m, n = bmask.shape
+	ratio = lost/(m*n)
+	printv("""Image Bounds Are:
+	Top-Left: ({:d}, {:d})
+	Bottom-Right: ({:d}, {:d})
+	Pixels Lost: {:d} ({:.2%})""".format(top, left, bottom, right, lost, ratio))
+
+	return bmask
+
+def usage():
+
+	msg = """master_crop -o OUTFILE [-v] MASKFILE1 [MASKFILE2...]
+-o OUTFILE            Name of Output File
+-v                    Verbose
+-h                    This Message
+"""
+	print(msg)
+	exit(1)
+
+def get_mask_data(imagenames):
+	'''generator function that provides
+	areays of binary masks from input
+	filenames
+	'''
+
+	for imagename in imagenames:
+		with fits.open(imagename) as f:
+			yield f[0].data.astype(bool)
+
+
+def main():
+	global VERBOSE
+
+	opts, args = getopt.getopt(sys.argv[1:], 'o:hv')
+	opts = dict(opts)
+
+	if '-h' in opts:
+		usage()
+	if '-v' in opts:
+		VERBOSE |= True
+	
+	assert len(args), "Please Provide Input Mask Files"
+	assert '-o' in opts, "Please provide output filename"
+
+	images = args
+	outfile = opts['-o']
+
+	masks = get_mask_data(images)
+	mask = get_master_mask(*masks)
+	
+	bmask = get_boundary_mask(mask)
+	hdu = fits.PrimaryHDU(bmask.astype(np.uint8))
+	hdu.writeto(outfile)
+
+if __name__ == '__main__':
+
+	main()
+

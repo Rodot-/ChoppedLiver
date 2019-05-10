@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+BASEDIR=obs0_data
+#RAWDIR=$BASEDIR/raw
+FOOTPRINTDIR=$BASEDIR/footprints
+MASKDIR=$BASEDIR/masks
+TEMPDIR=$BASEDIR/temp
+CORRECTEDDIR=$BASEDIR/corrected
+TEMPLATE="$(cat obs_0.dat | head -n 1)" # can be set
+OBJECTS="$(cat obs_0.dat)"
+
+for image in $OBJECTS
+do
+	if [ -f $image ]; then
+		BASENAME=${image##*/} # basename of raw image
+		IMAGENAME=${BASENAME%%.fits} # imagename without extension
+		FOOTPRINT="$FOOTPRINTDIR/$BASENAME"
+		MASK="$MASKDIR/$BASENAME"
+		OUTFILE="$CORRECTEDDIR/${IMAGENAME}_cor.fits"
+
+		echo "  $IMAGENAME"; # imagename
+
+		# perform projection
+		./reproject_image -t $TEMPLATE -o "$TEMPDIR/$BASENAME" -m "$FOOTPRINT" "$image"
+
+		# get rid of cosmics
+		./remove_cosmics -o "$OUTFILE" -m "$MASK" -f "$FOOTPRINT" "$TEMPDIR/$BASENAME"
+
+		echo "Done"
+	fi
+done
+
+
