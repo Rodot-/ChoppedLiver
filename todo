@@ -38,4 +38,5 @@ Add a script that verifies the output of the run_clean images
 	the script should check for zeros, negative values, and non-finite values
 Create an overleaf document to keep track of parameter changes with ISIS
 Determine good logging methods for changes to ISIS subtract runs
-
+Create a directory somewhere containing resources such as pdfs, links, etc
+	Having a perminant reference to these resources will be helpful for keeping us all on the same page
