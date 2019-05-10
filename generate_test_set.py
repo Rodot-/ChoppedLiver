@@ -53,7 +53,6 @@ DEFAULT_KEYS = ("FILENAME",
 				"MJD", # Date
 				"SEEING", # PSF Sigma
 				"OBSID", # Can only select OBS_1 for now
-				"ROTSKYPA" # Rotation angle on the sky
 				)
 
 # This should be a more sophisticated function that gets 
