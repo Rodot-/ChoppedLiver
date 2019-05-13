@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+
+'''
+master_crop - create binary mask file of largest area rectangle encompassing bitwise and of input boolean masks.
+
+Author: Jack O'Brien
+Created: 20190405
+Modified: 20190410
+'''
+import sys
+import getopt
+
+import numpy as np
+import operator
+from astropy.io import fits
+
+def get_mask_shape(mask):
+	'''get the shape of the rectangular mask'''
+
+	rows, cols = np.where(mask)
+	shape = (1+rows.max() - rows.min(), 1+cols.max() - cols.min())
+	return shape
+
+def apply_mask(mask, images, replace='crop'):
+	'''apply the rectangular mask to
+	an iterable of images (numpy arrays)
+	'''
+
+	if replace == 'crop':
+		shape = get_mask_shape(mask)
+		mask = np.where(mask) # a bit faster
+		for image in images:
+			yield image[mask].reshape(shape)
+
+	elif replace == 'background':
+		for image in images:
+			bkg = np.median(image[mask]) # estimate the image background
+			image[~mask] = bkg
+			return image
+
+	elif type(replace) in (int, float):
+		for image in images:
+			image[~mask] = replace
+			yield image	
+
+def load_files(*filenames):
+	for filename in filenames:
+		with fits.open(filename) as f:
+			yield np.array(f[0].data)
+
+def test():
+	import glob, os
+	files = glob.glob('obs0/corrected/*.fits')
+	with fits.open('bmask.fits') as f:
+		mask = np.array(f[0].data).astype(np.bool)
+		for fname, new_data in zip(files, apply_mask(mask, load_files(*files))):
+			hdu = fits.PrimaryHDU(new_data)
+			fname = 'obs0/crop/'+os.path.basename(fname).replace('cor','clean')
+			hdu.writeto(fname)
+			print(f'Wrote: {fname}')
+
+if __name__ == '__main__':
+
+	test()
