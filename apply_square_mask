@@ -49,13 +49,14 @@ def load_files(*filenames):
 			yield np.array(f[0].data)
 
 def test():
-	import glob, os
-	files = glob.glob('obs0/corrected/*.fits')
+	import glob, os, sys
+	folder = sys.argv[1]
+	files = glob.glob(f'{folder}/corrected/*.fits')
 	with fits.open('bmask.fits') as f:
 		mask = np.array(f[0].data).astype(np.bool)
 		for fname, new_data in zip(files, apply_mask(mask, load_files(*files))):
 			hdu = fits.PrimaryHDU(new_data)
-			fname = 'obs0/crop/'+os.path.basename(fname).replace('cor','clean')
+			fname = f'{folder}/crop/'+os.path.basename(fname).replace('cor','clean')
 			hdu.writeto(fname)
 			print(f'Wrote: {fname}')
 
