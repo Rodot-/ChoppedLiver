@@ -59,10 +59,10 @@ OBJECTS="$(cat $OBSFILE)" # get the locations of all of our objects
 
 for image in $OBJECTS
 do
-	image=$RAWDIR/$image # set the relative location of the image file
+	image="$RAWDIR/$image" # set the relative location of the image file
 	if [ -f $image ]; then
-		BASENAME=${image##*/} # basename of raw image
-		IMAGENAME=${BASENAME%%.fits} # imagename without extension
+		BASENAME=${image##*/}.gz # basename of raw image
+		IMAGENAME=${BASENAME%%.fits.gz} # imagename without extension
 		FOOTPRINT="$FOOTPRINTDIR/$BASENAME"
 		MASK="$MASKDIR/$BASENAME"
 		OUTFILE="$CORRECTEDDIR/${IMAGENAME}_cor.fits"
