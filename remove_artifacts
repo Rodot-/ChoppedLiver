@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+
+'''
+remove_artifacts
+
+Description: Look for bad or oversaturated pixels and replace them with reasonable values
+
+Author: John O'Brien
+
+Created: 2019-05-16
+Modified: 2019-05-16
+Version: 0.0
+
+'''
+import sys
+import getopt
+
+import numpy as np
+from astropy.io import fits
+
+
+def sub_pixels(image, replace=50_000, which='negative'):
+	'''substitute pixels in an image
+	which pixels to substitutes can be:
+		negative: substitute negative values
+		nan: NaN values
+		zeros: zero values
+		all: all non-finite, zero, or negative pixels
+	'''
+
+	mask = np.zeros(image.shape, dtype=np.bool)
+	if which == 'all':
+		which = ('zeros','negative','nan')
+	else:
+		which = ('which',)
+
+	for w in which:
+
+		if w == 'negative':
+			mask |= image < 0
+
+		elif w == 'zeros':
+			mask |= image == 0
+	
+		elif w == 'nan':
+			mask |= ~np.isfinite(image)
+
+		else:
+			raise ValueError('Invalid Value: {}'.format(w))
+
+	image[mask] = replace
+
+	return image
+
+def write_out(image, filename):
+	''' Helper function for writing fits files'''
+
+	fits.PrimaryHDU(image).writeto(filename, overwrite=True)
+
+def usage():
+
+	msg = """remove_artifacts -r REPLACE -w WHICH -o OUTFILE IMAGEFILE
+	
+-r REPLACE            Value with which to replace bad pixels
+-o OUTFILE            Name of Output File
+-w WHICH              Which pixels to replace
+-h                    This Message
+"""
+	print(msg)
+	exit(0)
+
+def main():
+
+	opts, args = getopt.getopt(sys.argv[1:], 'r:o:w:h')
+	opts = dict(opts)
+
+	if '-h' in opts:
+		usage()
+
+	assert len(args), "Please Provide Image(s) to Correct"
+	assert '-o' in opts, "Please Provide and Output Filename (-o OUT)"
+
+	replace = float(opts['-r'])
+	which = opts['-w']
+	outfile = opts['-o']
+	imagename = args[0]
+
+	with fits.open(imagename) as f:
+		image = np.array(f[0].data)
+		image = sub_pixels(image, replace, which)
+
+	write_out(image, outfile)
+	
+if __name__ == '__main__':
+
+	main()	
+
+
