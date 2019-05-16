@@ -16,9 +16,14 @@ import sys
 import getopt
 
 import numpy as np
-from lacosmic import lacosmic
 from astropy.io import fits
 
+try: # use the faster one if it's installed
+	from lacosmicx import lacosmicx as lacosmic
+	lax = True
+except ImportError: # otherwise, fall back to the one you install with pip
+	from lacosmic import lacosmic
+	lax = False
 
 def remove_cosmics(image, sigclip=4.5, sigfrac=0.4, objlim=2, 
 							niter=4, saturation=50000, footprint=None):
@@ -43,7 +48,13 @@ def remove_cosmics(image, sigclip=4.5, sigfrac=0.4, objlim=2,
 		else:
 			mask = sat_mask
 
-	clean, footprint = lacosmic(data, objlim, sigclip, sigfrac, 
+	if lax:
+		footprint, clean = lacosmic(np.ascontiguousarray(data).astype('f4'), 
+							objlim=objlim, sigclip=sigclip, 
+							sigfrac=sigfrac, readnoise=rn, gain=gain, 
+							niter=niter, inmask=np.ascontiguousarray(mask).astype(np.uint8))
+	else:
+		clean, footprint = lacosmic(data, objlim, sigclip, sigfrac, 
 							readnoise=rn, effective_gain=gain, 
 							maxiter=niter, mask=mask)
 
