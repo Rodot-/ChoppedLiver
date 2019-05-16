@@ -32,7 +32,7 @@ def sub_pixels(image, replace=50_000, which='negative'):
 	if which == 'all':
 		which = ('zeros','negative','nan')
 	else:
-		which = ('which',)
+		which = (which,)
 
 	for w in which:
 
