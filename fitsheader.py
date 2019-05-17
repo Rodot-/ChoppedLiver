@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
 fitsheader.py
 
@@ -8,6 +8,9 @@ Command line interface for viewing the header information of one or more fits fi
 import sys
 import os
 import argparse
+from functools import partial
+
+printe = partial(print, file=sys.stderr)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-k", "--keys", help="Display Header Keys", action='store_true')
@@ -22,9 +25,9 @@ good_files = filter(os.path.isfile, args.files)
 bad_files = list(set(args.files) - set(good_files))
 
 if len(bad_files):
-	print>>sys.stderr, "The Following Provided Files Cannot be Found:"
+	printe("The Following Provided Files Cannot be Found:")
 	for f in bad_files:
-		print>>sys.stderr, " ", f
+		printe(" ", f)
 
 assert not (bool(args.keys) and bool(args.column)), "Cannot Use Both --keys and --column"
 assert not (bool(args.table) and not bool(args.column)), "Cannot Output in Table Format without Fields"
@@ -32,20 +35,19 @@ assert not (bool(args.table) and not bool(args.column)), "Cannot Output in Table
 if args.column:
 	keys = args.column.split(',')
 	if args.table:
-		print " ".join(keys)
+		print(" ".join(keys))
 
 
 from astropy.io import fits
 for filename in args.files:
 	try:
-		with fits.open(filename) as f:
-			header = f[args.hdu].header
-			header['FILENAME'] = os.path.basename(filename)
-			if args.keys:
-				print " ".join(header.keys())
-			elif args.column:
-				print " ".join([str(header[key]) for key in keys])
-			else:
-				print header.__repr__()
+		header = fits.getheader(filename, ext=args.hdu)
+		header['FILENAME'] = os.path.basename(filename)
+		if args.keys:
+			print(" ".join(header.keys()))
+		elif args.column:
+			print(" ".join([str(header[key]) for key in keys]))
+		else:
+			print(header.__repr__())
 	except Exception as e:
-		print>>sys.stderr, "Error in file \"%s\":" % os.path.basename(filename) ,e
+		printe("Error in file \"%s\":" % os.path.basename(filename) ,e)
