@@ -33,6 +33,8 @@ FOOTPRINTDIR=$BASEDIR/footprints # a place to store our reprojection footprint m
 MASKDIR=$BASEDIR/masks # a place to store our cosmic ray removal masks
 TEMPDIR=$BASEDIR/temp # a temp dir for intermediate steps
 CORRECTEDDIR=$BASEDIR/corrected # a directory to put our completed, corrected images
+SUBDIR=$BASEDIR/sub
+CROPDIR=$BASEDIR/crop
 
 if [ ! -d $FOOTPRINTDIR ]; then
 	mkdir -p $FOOTPRINTDIR
@@ -50,6 +52,16 @@ if [ ! -d $CORRECTEDDIR ]; then
 	mkdir -p $CORRECTEDDIR
 fi
 
+if [ ! -d $SUBDIR ]; then
+	mkdir -p $SUBDIR
+fi
+
+if [ ! -d $CROPDIR ]; then
+	mkdir -p $CROPDIR
+fi
+
+
+
 # make sure we have a template image, if not, get the first one
 if [ -z "$TEMPLATE" ]; then
 	TEMPLATE="$RAWDIR/$(cat $OBSFILE | head -n 1)" # can be set
@@ -61,11 +73,11 @@ for image in $OBJECTS
 do
 	image="$RAWDIR/$image" # set the relative location of the image file
 	if [ -f $image ]; then
-		BASENAME=${image##*/}.gz # basename of raw image
-		IMAGENAME=${BASENAME%%.fits.gz} # imagename without extension
+		BASENAME=${image##*/} # basename of raw image
+		IMAGENAME=${BASENAME%%.fits} # imagename without extension
 		FOOTPRINT="$FOOTPRINTDIR/$BASENAME"
 		MASK="$MASKDIR/$BASENAME"
-		OUTFILE="$CORRECTEDDIR/${IMAGENAME}_cor.fits"
+		OUTFILE="$CORRECTEDDIR/${IMAGENAME}.fits"
 
 		echo "  $IMAGENAME"; # imagename
 
@@ -74,6 +86,30 @@ do
 
 		# get rid of cosmics
 		./remove_cosmics -o "$OUTFILE" -m "$MASK" -f "$FOOTPRINT" "$TEMPDIR/$BASENAME"
+
+	fi
+done
+
+# find the area containing data for all images
+echo "Generating Master Footprint"
+COMMONMASK="$FOOTPRINTDIR/${BASEDIR}.fits"
+./master_crop -o "$COMMONMASK" $FOOTPRINTDIR/*.fits
+
+echo "Applying Master Footprint"
+# apply the common mask to the crop dir
+./apply_square_mask -o "$CROPDIR" -m "$COMMONMASK" -s crop $CORRECTEDDIR/*.fits
+
+# now we'll run hotpants to do image subtraction
+for image in $OBJECTS
+do
+	image="$RAWDIR/$image" # set the relative location of the image file
+	if [ -f $image ]; then
+		BASENAME=${image##*/} # basename of raw image
+		IMAGENAME=${BASENAME%%.fits} # imagename without extension
+		SUBFILE="$SUBDIR/${IMAGENAME}.fits"
+
+		/mnt/home/obrie278/OpticalReduction/hotpants/hotpants -inim "$CROPDIR/${IMAGENAME}.fits" -tmplim "$CROPDIR/${TEMPLATE##*/}" -outim $SUBFILE
+
 
 		echo "Done"
 	fi
