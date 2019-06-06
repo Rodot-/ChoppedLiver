@@ -9,6 +9,7 @@ Modified: 20190410
 '''
 import sys
 import getopt
+import os
 
 import numpy as np
 import operator
@@ -48,18 +49,52 @@ def load_files(*filenames):
 		with fits.open(filename) as f:
 			yield np.array(f[0].data)
 
-def test():
-	import glob, os, sys
-	folder = sys.argv[1]
-	files = glob.glob(f'{folder}/corrected/*.fits')
-	with fits.open('bmask.fits') as f:
+def usage():
+
+	msg = """apply_square_mask -o OUTDIR -m MASKFILE [-s SUBSITUTION] IMAGEFILE
+	
+-o OUTDIR             Name of Output Directory
+-m MASKFILE           Name of Square Mask File to Apply
+-s SUBSTITUTION       Method of mask area subsitution
+                      Options are as follows:
+                         crop - (default) crop the image to the area of the mask
+                         background - use a median image background value
+                         [floating point litteral] - use provided value
+-h                    This Message
+"""
+	print(msg)
+	exit(0)
+
+def main():
+
+	opts, args = getopt.getopt(sys.argv[1:], 'o:m:s:h')
+	opts = dict(opts)
+
+	if '-h' in opts:
+		usage()
+
+	assert len(args), "Please Provide Image(s) to Apply mask to"
+	assert '-o' in opts, "Please Provide and Output Filename (-o OUT)"
+
+	imagenames = args
+	outdir = opts['-o']
+	maskfile = opts['-m']
+	method = 'crop'
+	if '-s' in opts:
+		method = opts['-s']
+		try:
+			method = float(method)
+		except:
+			pass # isn't a float or int
+
+	data = load_files(*imagenames)
+	with fits.open(maskfile) as f:
 		mask = np.array(f[0].data).astype(np.bool)
-		for fname, new_data in zip(files, apply_mask(mask, load_files(*files))):
+		for fname, new_data in zip(imagenames, apply_mask(mask, data, method)):
+			outfile = os.path.join(outdir, os.path.basename(fname))
 			hdu = fits.PrimaryHDU(new_data)
-			fname = f'{folder}/crop/'+os.path.basename(fname).replace('cor','clean')
-			hdu.writeto(fname)
-			print(f'Wrote: {fname}')
+			hdu.writeto(outfile)
 
 if __name__ == '__main__':
 
-	test()
+	main()
