@@ -30,24 +30,24 @@ def apply_mask(mask, images, replace='crop'):
 	if replace == 'crop':
 		shape = get_mask_shape(mask)
 		mask = np.where(mask) # a bit faster
-		for image in images:
-			yield image[mask].reshape(shape)
+		for image, header in images:
+			yield image[mask].reshape(shape), header
 
 	elif replace == 'background':
-		for image in images:
+		for image, header in images:
 			bkg = np.median(image[mask]) # estimate the image background
 			image[~mask] = bkg
-			return image
+			return image, header
 
 	elif type(replace) in (int, float):
-		for image in images:
+		for image, header in images:
 			image[~mask] = replace
-			yield image	
+			yield image, header
 
 def load_files(*filenames):
 	for filename in filenames:
 		with fits.open(filename) as f:
-			yield np.array(f[0].data)
+			yield np.array(f[0].data), f[0].header
 
 def usage():
 
@@ -90,9 +90,15 @@ def main():
 	data = load_files(*imagenames)
 	with fits.open(maskfile) as f:
 		mask = np.array(f[0].data).astype(np.bool)
-		for fname, new_data in zip(imagenames, apply_mask(mask, data, method)):
+		for fname, (new_data, header) in zip(imagenames, apply_mask(mask, data, method)):
 			outfile = os.path.join(outdir, os.path.basename(fname))
 			hdu = fits.PrimaryHDU(new_data)
+			# copy some header data back over
+			hdu.header['GAIN'] = header['GAIN']
+			hdu.header['READNOIS'] = header['READNOIS']
+			hdu.header['MJD'] = header['MJD']
+			if 'SEEING' in header:
+				hdu.header['SEEING'] = header['SEEING']
 			hdu.writeto(outfile)
 
 if __name__ == '__main__':
