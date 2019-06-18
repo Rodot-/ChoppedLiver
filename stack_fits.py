@@ -14,10 +14,11 @@ def main():
 		print("Please select files to stack")
 	files = sys.argv[1:]	
 
-	arrays = np.empty((len(files), 2048, 2048), dtype=np.float)
+	arrays = []
 	for i,f in enumerate(files):
 		with fits.open(f) as ff:
-			arrays[i] = np.array(ff[0].data)
+			arrays.append(np.array(ff[0].data))
+	arrays = np.array(arrays)
 
 	out = np.nanmedian(arrays, axis=0)
 	#fig, ax = subplots(1,1)
@@ -27,8 +28,8 @@ def main():
 	out_hdu = fits.PrimaryHDU(out)
 	var_hdu = fits.PrimaryHDU(var)
 
-	fits.HDUList([out_hdu]).writeto('stacked.fits')
-	fits.HDUList([var_hdu]).writeto('var.fits')
+	fits.HDUList([out_hdu]).writeto('stacked.fits', overwrite=True)
+	fits.HDUList([var_hdu]).writeto('var.fits', overwrite=True)
 
 
 if __name__ == '__main__':
