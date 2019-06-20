@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+'''
+sub_pix
+subsitute pixels of some value in some way
+python3
+'''
+
+import sys
+import argparse
+
+import numpy as np
+from astropy.io import fits
+
+
+
+def is_float(string):
+	'''determine if the value can be converted to a float'''
+	try:
+		float(string)
+		return True
+	except ValueError:
+		return False
+
+def parse_choice(string, *, mask=False):
+	'''parse the user input to determine what they mean
+	Args:	
+		string (string)  User input from the command line 
+	Kwargs:
+		mask (bool)      Should we return a mask generating function?'''
+	if string.upper() == 'NAN': # user means not a number
+		return np.isnan if mask else np.nan
+	elif is_float(string):
+		value = float(string)
+		return (lambda x: x == value) if mask else value
+	elif '==' in string or '<' in string or '>' in string:
+		if mask:
+			func = []
+			exec('func.append(lambda x: x {0})'.format(string), globals(), locals())
+			return func.pop()
+		else:
+			raise ValueError('Can\'t set a mask to a value')
+
+
+def sub_pix(selection, replacement, filein, fileout):
+
+	mask_func = parse_choice(selection, mask=True)
+	repl_value = parse_choice(replacement, mask=False)
+	with fits.open(filein) as f:
+
+		image = np.array(f[0].data)
+		mask = mask_func(image)
+		image[mask] = repl_value
+		f[0].data = image
+		f.writeto(fileout, overwrite=True)
+
+
+if __name__ == '__main__':
+
+	parser = argparse.ArgumentParser()
+	parser.add_argument('-s','--select', 
+		help='Which pixels you would like to select'\
+			 '  Can be either a number, NaN, or simple expression'\
+			 '  Expressions of the form [OPERATOR][VALUE]'
+			 '    Examples: <16, ==5.0, >=500', type=str)
+	parser.add_argument('-r','--replace', help='Replacement value', type=str)
+	parser.add_argument('-o','--out', help='Output Filename', type=str)
+	parser.add_argument('filename', help='Input file to work on', type=str, nargs=1)
+
+	args = parser.parse_args()
+
+	sub_pix(args.select, args.replace, args.filename[0], args.out)
+
+
