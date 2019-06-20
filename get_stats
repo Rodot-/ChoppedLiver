@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+'''
+compute some useful stats for the images and image subtraction
+and add them to the header of the image
+'''
+
+import sys
+from multiprocessing.pool import ThreadPool as Pool
+
+import numpy as np
+from astropy.io import fits
+
+def add_stats(filename):
+	with fits.open(filename, mode='update') as f:
+		image = np.array(f[0].data)
+	
+		# get the median absolute deviation
+		f[0].header['MEDIAN'] = med = np.median(image)
+		f[0].header['MAD'] = mad = np.median(np.absolute(image - med))
+		f[0].header['LOWVAL'] = med - 10*mad # Lower Valid Data Count
+
+		f[0].header['MEAN'] = np.mean(image)
+		f[0].header['RMS'] = np.sqrt(np.mean(image**2))
+		f[0].header['STD'] = np.std(image)
+
+		if 'SEEING' not in f[0].header or f[0].header['SEEING'] > 100:
+			f[0].header['SEEING'] = (2.0, "No SEEING param found, this is fudged")
+		seeing = f[0].header['SEEING']
+
+		f[0].header['HALFMESH'] = int(2.5*seeing+0.5)
+		f[0].header['HALFSTAM'] = int(6.0*seeing+0.5)
+
+		f.flush()
+
+if __name__ == '__main__':
+
+	P = Pool(8)
+	P.map(add_stats, sys.argv[1:])
+	
