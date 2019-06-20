@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+# This is a helper script for running image subtraction using hotpants
+# (or maybe ISIS, I haven't decided if I want to impliment it yet)
+
+# a poor imlpimentation of an exception
+except () {
+	echo "ERROR: $1"
+	if [ "$2" != "" ]; then
+		exit $2;
+	fi
+	exit 1;
+}
+
+get_param () { # get a parameter from a config file
+
+	local FILE=$1 # the config file
+	local PARAM=$2 # the parameter we want
+	echo "$(grep $PARAM $FILE | awk '{print $2}')"
+	return 0;
+}
+
+
+# some options to help select which package to use for subtraction
+
+PACKAGE="hotpants" # default image subtraction package
+HOTPANTS="/mnt/home/obrie278/OpticalReduction/hotpants/hotpants"
+ISIS="/mnt/home/obrie278/OpticalReduction/ChoppedLiver/package/subtract/mrj_phot"
+CONFIG="process_config"
+DEFAULT="default_config"
+
+while [ "$1" != "" ]; do
+	case $1 in
+		-p | --package )	shift
+							PACKAGE=$1 # ISIS or hotpants
+							;;
+		-c | --config )		shift # process config file
+							CONFIG=$1
+							;;
+		-d | --default )	shift # default config file
+							DEFAULT=$1
+							;;
+		-D | --dir )		shift # directory to act on
+							DIRECTORY=$1
+							;;
+		-o | --outdir )		shift # output file directory
+							OUT=$1
+							;;
+		-n | --number )		shift # number of files to subtract (for testing)
+							N=$1
+							;;
+
+		* )					exit 1
+	esac
+	shift
+done
+
+mkdir -p $OUT
+
+if [ $PACKAGE == "hotpants" ]; then
+	subtract=$HOTPANTS;
+
+elif [ $PACKAGE == "ISIS" ]; then
+	subtract=$ISIS;
+
+elif [ -f $PACKAGE ]; then
+	subtract="./$PACKAGE";
+
+else
+	echo "ERROR: Invalid Subtract Package";
+	exit 2;
+
+fi
+
+if [ $PACKAGE == "hotpants" ]; then # run image subtraction using hotpants
+
+	echo "Extracting Parameters"
+	# grab the parameters and cline opts from the config files
+	ref_file=$(get_param $CONFIG REF_SUB)
+	echo "got ref file"
+	sat="$(get_param $DEFAULT saturation)"
+	sat="-tu $sat -iu $sat" # set for both input and template
+	pix_min="$(get_param $DEFAULT pix_min)"
+	#pix_min="-tl $pix_min -il $pix_min" # set for both input and template
+	pix_min="-tl $pix_min" # set for both input and template
+	#half_mesh_size="-r $(get_param $DEFAULT half_mesh_size)" #kernel half width
+	half_mesh_size=
+	#half_stamp_size="-rss $(get_param $DEFAULT half_stamp_size)"
+	half_stamp_size=
+	sub_x="-nrx $(get_param $DEFAULT sub_x)"
+	sub_y="-nry $(get_param $DEFAULT sub_y)"
+	nstamps_x="-nsx $(get_param $DEFAULT nstamps_x)"
+	nstamps_y="-nsy $(get_param $DEFAULT nstamps_y)"
+	deg_spatial="-ko $(get_param $DEFAULT deg_spatial)"
+	deg_bg="-bgo $(get_param $DEFAULT deg_bg)"
+
+	# gaussians
+	ngauss="$(get_param $DEFAULT ngauss)"
+	dg1="$(get_param $DEFAULT deg_gauss1)"
+	dg2="$(get_param $DEFAULT deg_gauss2)"
+	dg3="$(get_param $DEFAULT deg_gauss3)"
+	ds1="$(get_param $DEFAULT sigma_gauss1)"
+	ds2="$(get_param $DEFAULT sigma_gauss2)"
+	ds3="$(get_param $DEFAULT sigma_gauss3)"
+
+	#gaussians="-ng $ngauss $dg1 $ds1 $dg2 $ds2 $dg3 $ds3" # remove this line, do in loop
+
+
+	#all_im="-allm" # this will output all image layers, so be careful!	
+
+	echo "Running Fitsheader"
+	# params unique to files
+	t_params="$(./fitsheader.py -c "GAIN,READNOIS" $ref_file)" #template
+	t_params=$(echo "$t_params" | awk '{print "-tg " $1 " -tr " $2}')
+
+	t_seeing="$(./fitsheader.py -c "SEEING" $ref_file)"
+	
+	default_params="$sat $pix_min $half_mesh_size $half_stamp_size $sub_x $sub_y $nstamps_x $nstamps_y $deg_spatial $deg_bg $t_params -c t" # convolve only the science image
+
+	files=$(ls -d $DIRECTORY/*.fits)
+	if [ ! -z $N ]; then
+		files=$(echo "$files" | head -n $N)
+	fi
+
+	echo "Running Subtract"
+	#for file in $DIRECTORY/*.fits; do
+	for file in $files; do
+		out_file="$OUT/${file##*/}"
+
+		i_params="$(./fitsheader.py -c "GAIN,READNOIS,SEEING,LOWVAL,HALFMESH,HALFSTAM" $file)" # input image
+		i_seeing=$(echo "$i_params" | awk '{print $3}')
+		i_params=$(echo "$i_params" | awk '{print "-ig " $1 " -ir " $2 " -r " $5 " -rss " $6 " -il " $4}')
+		ds=$(python -c "import math; print(max(math.sqrt($i_seeing**2-$t_seeing**2)/2.355,0.7) if $i_seeing < 100 else 2.0)")
+		gaussians=$(python -c "print('-ng', $ngauss, $dg1, $ds1*$ds, $dg2, $ds2*$ds, $dg3, $ds3*$ds)")
+
+		echo "$subtract -inim $file -tmplim $ref_file -outim $out_file $i_params $default_params $gaussians"
+		#$subtract -inim $file -tmplim $ref_file -outim $out_file $i_params $default_params $gaussians
+		echo "Done $file";
+	done
+fi
