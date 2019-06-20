@@ -14,6 +14,7 @@ import os
 import numpy as np
 import operator
 from astropy.io import fits
+from multiprocessing import Pool
 
 def get_mask_shape(mask):
 	'''get the shape of the rectangular mask'''
@@ -46,8 +47,10 @@ def apply_mask(mask, images, replace='crop'):
 
 def load_files(*filenames):
 	for filename in filenames:
-		with fits.open(filename) as f:
-			yield np.array(f[0].data), f[0].header
+		data, header = fits.getdata(filename, 0, header=True)
+		yield np.array(data), header
+		#with fits.open(filename) as f:
+		#	yield np.array(f[0].data), f[0].header
 
 def usage():
 
@@ -93,12 +96,19 @@ def main():
 		for fname, (new_data, header) in zip(imagenames, apply_mask(mask, data, method)):
 			outfile = os.path.join(outdir, os.path.basename(fname))
 			hdu = fits.PrimaryHDU(new_data)
+		
+			# put back all of the lost header information
+			# minus actual data format information
+			for key in hdu.header:
+				if key in header:
+					del header[key]
+			hdu.header.update(header)
 			# copy some header data back over
-			hdu.header['GAIN'] = header['GAIN']
-			hdu.header['READNOIS'] = header['READNOIS']
-			hdu.header['MJD'] = header['MJD']
-			if 'SEEING' in header:
-				hdu.header['SEEING'] = header['SEEING']
+			#hdu.header['GAIN'] = header['GAIN']
+			#hdu.header['READNOIS'] = header['READNOIS']
+			#hdu.header['MJD'] = header['MJD']
+			#if 'SEEING' in header:
+			#	hdu.header['SEEING'] = header['SEEING']
 			hdu.writeto(outfile)
 
 if __name__ == '__main__':
