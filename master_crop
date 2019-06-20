@@ -128,8 +128,9 @@ def get_mask_data(imagenames):
 	'''
 
 	for imagename in imagenames:
-		with fits.open(imagename) as f:
-			yield f[0].data.astype(bool)
+		yield fits.getdata(imagename, 0).astype(bool)
+		#with fits.open(imagename) as f:
+		#	yield f[0].data.astype(bool)
 
 
 def main():
