@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+./fitsheader.py -c "SEEING,MJD,FILENAME" $1/*.fits | sort -n | awk '{print $3 " " $2 " " $1}' > dates
+	
