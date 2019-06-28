@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+import sys
+import argparse
+
+import numpy as np
+from scipy.optimize import curve_fit
+
+from astropy.io import fits
+from astropy.table import Table
+from astropy.stats import sigma_clipped_stats, gaussian_sigma_to_fwhm
+from astropy.nddata import NDData
+from astropy.visualization import simple_norm
+
+from photutils import find_peaks, EPSFBuilder
+from photutils.psf import extract_stars
+from photutils.detection import detect_threshold
+from photutils.centroids import centroid_2dg
+
+import matplotlib.pyplot as plt
+
+
+VERBOSITY=1
+PLOT=False
+
+def printv(*args, verbosity=1):
+	global VERBOSITY
+
+	if verbosity <= VERBOSITY:
+		print(*args)
+
+def build_gaussian_model(origin):
+
+	def gaussian_model(yx, sigma, amp):
+
+		y, x = yx
+		result = amp*np.exp(-((x-origin[0])**2+(y-origin[1])**2)/(2*sigma**2)).ravel()
+		return result
+
+	return gaussian_model
+
+def build_psf(filename, box_size=25, oversampling=4):
+	'''Notes:
+	Variables to play with or make kwargs:
+		snr: Signal to Noise Ratio for Detection Threshold
+		sigma: Sigma Clip Stats Value for Background
+		cutout_size: size in pixels for star cutouts
+		oversampling: Not sure, read EPSF docs
+		maxiters: probably for speed, 3 is probs fine
+		box_size: How big a region to search for a star	
+	'''
+	global PLOT, VERBOSITY
+
+	printv(filename)
+	with fits.open(filename, mode='update') as f:
+
+		if 'FWHM' in f[0].header:
+			return
+		image = np.array(f[0].data)
+		seeing = f[0].header['SEEING']
+		
+		threshold = detect_threshold(image, snr=6.0) # set snr based on image
+
+		printv('  Finding Stars...')
+		peaks_tbl = find_peaks(image, threshold=threshold, box_size=box_size, border_width=100, centroid_func=centroid_2dg) # set threshold based on image	
+		stars_tbl = Table()
+		stars_tbl['x'] = peaks_tbl['x_peak']
+		stars_tbl['y'] = peaks_tbl['y_peak']
+
+		printv('  Computing Background...')
+		mean_val, median_val, std_val = sigma_clipped_stats(image, sigma=2.)
+		image -= median_val
+
+		nddata = NDData(data=image)
+
+		printv('  Extracting Cutouts...')
+		stars = extract_stars(nddata, stars_tbl, size=box_size) # set size based on est psf
+	
+		printv('  Building PSF...')
+		epsf_builder = EPSFBuilder(oversampling=oversampling, maxiters=3, progress_bar=bool(VERBOSITY), recentering_func=centroid_2dg)
+		epsf, fitted_stars = epsf_builder(stars)
+
+		print('Origin: ',epsf.origin)
+
+		printv('  Fitting Gaussian PSF...')
+		grid_size = epsf.data.shape[0]
+		grid = np.meshgrid(*([np.arange(grid_size)]*2))
+		gaussian_model = build_gaussian_model(epsf.origin)
+		popt, pcov = curve_fit(gaussian_model, grid, epsf.data.ravel())
+		model = gaussian_model(grid, *popt)
+		conversion = epsf.data.shape[0]/box_size # convert between shapes
+		FWHM = abs(popt[0])*gaussian_sigma_to_fwhm/conversion 
+
+		printv('--FWHM: {}'.format(FWHM)) 
+		printv('--Header SEEING: {}'.format(seeing))
+		printv('--Difference: {}'.format(FWHM-seeing))
+
+		f[0].header['FWHM'] = (FWHM, 'Gaussian Model, Astropy ePSF')
+		
+		if PLOT:
+
+			printv('  Plotting...')
+					
+			plt.figure()
+			norm = simple_norm(epsf.data, 'log', percent=99.)
+			plt.imshow(epsf.data, norm=norm, origin='lower', cmap='viridis')
+			plt.colorbar()		
+			
+			plt.figure()
+			norm = simple_norm(image, percent=99.)
+			plt.imshow(image, norm=norm, origin='lower', cmap='Greys_r')
+			plt.colorbar()
+			plt.scatter(stars_tbl['x'], stars_tbl['y'], s=50, color='none', edgecolor='r')
+			
+			plt.figure()
+			norm = simple_norm(epsf.data, 'log', percent=99.)
+			plt.imshow(model.reshape(grid_size,grid_size), norm=norm, origin='lower', cmap='viridis')
+			plt.colorbar()
+			
+			plt.show()
+
+if __name__ == '__main__':
+
+	parser = argparse.ArgumentParser()
+	parser.add_argument('-s', '--show', help='Show Plots of ePSF, Star Locations, and Model',
+						dest='plot', action='store_true')
+	parser.add_argument('-v', '--verbose', help='Verbosity Level', dest='verbosity', default=0, action='store_const', const=1)
+	parser.add_argument('files', help='Input Fits File(s)', type=str, nargs='+')
+
+	args = parser.parse_args()
+	PLOT = args.plot
+	VERBOSITY = args.verbosity
+
+	for f in args.files:
+		try:
+			build_psf(f, box_size=25, oversampling=4)
+		except Exception as e:
+			print(e, file=sys.stderr)
