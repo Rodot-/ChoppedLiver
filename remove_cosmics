@@ -25,7 +25,7 @@ except ImportError: # otherwise, fall back to the one you install with pip
 	from lacosmic import lacosmic
 	lax = False
 
-def remove_cosmics(image, sigclip=4.5, sigfrac=0.4, objlim=2, 
+def remove_cosmics(image, sigclip=4.5, sigfrac=0.4, objlim=3, 
 							niter=4, saturation=50000, footprint=None):
 	'''remove cosmic rays with lacosmic'''
 
