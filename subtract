@@ -23,7 +23,7 @@ get_param () { # get a parameter from a config file
 # some options to help select which package to use for subtraction
 
 PACKAGE="hotpants" # default image subtraction package
-HOTPANTS="/mnt/home/obrie278/OpticalReduction/hotpants/hotpants"
+HOTPANTS="hotpants"
 ISIS="/mnt/home/obrie278/OpticalReduction/ChoppedLiver/package/subtract/mrj_phot"
 CONFIG="process_config"
 DEFAULT="default_config"
@@ -112,7 +112,7 @@ if [ $PACKAGE == "hotpants" ]; then # run image subtraction using hotpants
 	t_params="$(./fitsheader.py -c "GAIN,READNOIS" $ref_file)" #template
 	t_params=$(echo "$t_params" | awk '{print "-tg " $1 " -tr " $2}')
 
-	t_seeing="$(./fitsheader.py -c "SEEING" $ref_file)"
+	t_seeing="$(./fitsheader.py -c "FWHM" $ref_file)"
 	
 	default_params="$sat $pix_min $half_mesh_size $half_stamp_size $sub_x $sub_y $nstamps_x $nstamps_y $deg_spatial $deg_bg $t_params -c t" # convolve only the science image
 
@@ -121,19 +121,20 @@ if [ $PACKAGE == "hotpants" ]; then # run image subtraction using hotpants
 		files=$(echo "$files" | head -n $N)
 	fi
 
-	echo "Running Subtract"
+	
+	echo "Running Subtract" > log_subtract
 	#for file in $DIRECTORY/*.fits; do
 	for file in $files; do
 		out_file="$OUT/${file##*/}"
 
-		i_params="$(./fitsheader.py -c "GAIN,READNOIS,SEEING,LOWVAL,HALFMESH,HALFSTAM" $file)" # input image
+		i_params="$(./fitsheader.py -c "GAIN,READNOIS,FWHM,LOWVAL,HALFMESH,HALFSTAM" $file)" # input image
 		i_seeing=$(echo "$i_params" | awk '{print $3}')
 		i_params=$(echo "$i_params" | awk '{print "-ig " $1 " -ir " $2 " -r " $5 " -rss " $6 " -il " $4}')
 		ds=$(python -c "import math; print(max(math.sqrt($i_seeing**2-$t_seeing**2)/2.355,0.7) if $i_seeing < 100 else 2.0)")
 		gaussians=$(python -c "print('-ng', $ngauss, $dg1, $ds1*$ds, $dg2, $ds2*$ds, $dg3, $ds3*$ds)")
 
-		echo "$subtract -inim $file -tmplim $ref_file -outim $out_file $i_params $default_params $gaussians"
-		#$subtract -inim $file -tmplim $ref_file -outim $out_file $i_params $default_params $gaussians
+		echo "$subtract -inim $file -tmplim $ref_file -outim $out_file $i_params $default_params $gaussians" >> log_subtract
+		$subtract -inim $file -tmplim $ref_file -outim $out_file $i_params $default_params $gaussians
 		echo "Done $file";
 	done
 fi
