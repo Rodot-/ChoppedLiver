@@ -15,13 +15,13 @@ def add_stats(filename):
 		image = np.array(f[0].data)
 	
 		# get the median absolute deviation
-		f[0].header['MEDIAN'] = med = np.median(image)
-		f[0].header['MAD'] = mad = np.median(np.absolute(image - med))
+		f[0].header['MEDIAN'] = med = np.nanmedian(image)
+		f[0].header['MAD'] = mad = np.nanmedian(np.absolute(image - med))
 		f[0].header['LOWVAL'] = med - 10*mad # Lower Valid Data Count
 
-		f[0].header['MEAN'] = np.mean(image)
-		f[0].header['RMS'] = np.sqrt(np.mean(image**2))
-		f[0].header['STD'] = np.std(image)
+		f[0].header['MEAN'] = np.nanmean(image)
+		f[0].header['RMS'] = np.sqrt(np.nanmean(image**2))
+		f[0].header['STD'] = np.nanstd(image)
 
 		if 'SEEING' not in f[0].header or f[0].header['SEEING'] > 100:
 			f[0].header['SEEING'] = (2.0, "No SEEING param found, this is fudged")
