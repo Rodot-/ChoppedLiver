@@ -24,11 +24,34 @@ def is_float(string):
 def parse_choice(string, *, mask=False):
 	'''parse the user input to determine what they mean
 	Args:	
-		string (string)  User input from the command line 
+		string (string)  User input from the command line
+			Options:
+				NaN:     Not a Number
+				Inf:     Infinities
+				Fin:     Finite values
+				[float]: Representation of a floating point number
+			Notes:
+				String may begin with any of the following:
+					!:            logical negation operation on masks or floats
+					</<=/>/>=/==: Mask conditional for floating point input
 	Kwargs:
 		mask (bool)      Should we return a mask generating function?'''
+	if '!' in string:
+		if mask:
+			return lambda x: ~parse_choice(string[1:], mask=mask)(x)
+		else:
+			raise ValueError('Cannot apply mask negation to a float')
+
 	if string.upper() == 'NAN': # user means not a number
 		return np.isnan if mask else np.nan
+	elif string.upper() == 'INF': # infinities
+		return np.isinf if mask else np.inf
+	elif string.upper() == 'FIN': # finite
+		if mask:
+			return np.isfinite
+		else:
+			raise ValueError('Finite Scalar is Ambiguous')
+
 	elif is_float(string):
 		value = float(string)
 		return (lambda x: x == value) if mask else value
@@ -67,6 +90,8 @@ if __name__ == '__main__':
 	parser.add_argument('filename', help='Input file to work on', type=str, nargs=1)
 
 	args = parser.parse_args()
+	if args.out is None:
+		args.out = args.filename[0]
 
 	sub_pix(args.select, args.replace, args.filename[0], args.out)
 
