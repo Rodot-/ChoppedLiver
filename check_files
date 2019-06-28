@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+
+
+import sys
+from astropy.io import fits
+import numpy as np
+
+print('Filename     | NaNs | Zeros | Negatives | Infinities')
+for filename in sys.argv[1:]:
+	im = np.array(fits.getdata(filename, 0))
+	nans = np.isnan(im.ravel())
+	negs = im.ravel() < 0
+	zeros = im.ravel() == 0
+	infs = ~np.isfinite(im.ravel())
+	print(filename, np.sum(nans), np.sum(zeros), np.sum(negs), np.sum(infs))
