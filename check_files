@@ -2,14 +2,29 @@
 
 
 import sys
+from multiprocessing.pool import ThreadPool as Pool
+
 from astropy.io import fits
 import numpy as np
 
-print('Filename     | NaNs | Zeros | Negatives | Infinities')
-for filename in sys.argv[1:]:
+
+def get_params(filename):
 	im = np.array(fits.getdata(filename, 0))
-	nans = np.isnan(im.ravel())
-	negs = im.ravel() < 0
-	zeros = im.ravel() == 0
-	infs = ~np.isfinite(im.ravel())
-	print(filename, np.sum(nans), np.sum(zeros), np.sum(negs), np.sum(infs))
+	total = len(im.ravel())
+	nans = np.sum(np.isnan(im.ravel()))
+	nansp = nans/total
+	negs = np.sum(im.ravel() < 0)
+	negsp = negs/total
+	zeros = np.sum(im.ravel() == 0)
+	zerosp = zeros/total
+	infs = np.sum(np.isinf(im.ravel()))
+	infsp = infs/total
+	filename = filename[filename.rfind('/')+1:]
+	return f'{filename:<28} {nans:<7d} {nansp:<2.2%} {zeros:<7d} {zerosp:<2.2%} {negs:<7d} {negsp:<2.2%} {infs:<7d} {infsp:<2.2%}'
+	
+
+P = Pool(16)
+print('Filename     | NaNs | Zeros | Negatives | Infinities')
+for i in P.imap(get_params, sys.argv[1:]):
+	print(i)
+
