@@ -116,6 +116,9 @@ echo "Calculating Stats"
 # calculate some stats and parameters and add them to the headers
 ./get_stats $CROPDIR/*.fits
 
+for i in $CROPDIR/*.fits; do
+	./model_psf -v $i;
+done;
 # now we'll run hotpants to do image subtraction
 #for image in $OBJECTS
 #do
