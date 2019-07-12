@@ -57,7 +57,9 @@ def build_psf(filename, box_size=25, oversampling=4):
 			return
 		image = np.array(f[0].data)
 		seeing = f[0].header['SEEING']
-		
+		f[0].header['FWHM'] = seeing
+		f.flush()	
+	
 		threshold = detect_threshold(image, snr=6.0) # set snr based on image
 
 		printv('  Finding Stars...')
@@ -95,7 +97,8 @@ def build_psf(filename, box_size=25, oversampling=4):
 		printv('--Difference: {}'.format(FWHM-seeing))
 
 		f[0].header['FWHM'] = (FWHM, 'Gaussian Model, Astropy ePSF')
-		
+		f.flush()	
+	
 		if PLOT:
 
 			printv('  Plotting...')
