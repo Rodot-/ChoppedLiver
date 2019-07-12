@@ -37,36 +37,13 @@ SUBDIR=$BASEDIR/sub
 CROPDIR=$BASEDIR/crop
 RESAMPLEDIR=$BASEDIR/resample
 
-if [ ! -d $FOOTPRINTDIR ]; then
-	mkdir -p $FOOTPRINTDIR
-fi
-
-if [ ! -d $MASKDIR ]; then
-	mkdir -p $MASKDIR
-fi
-
-if [ ! -d $TEMPDIR ]; then
-	mkdir -p $TEMPDIR
-fi
-
-if [ ! -d $CORRECTEDDIR ]; then
-	mkdir -p $CORRECTEDDIR
-fi
-
-if [ ! -d $SUBDIR ]; then
-	mkdir -p $SUBDIR
-fi
-
-if [ ! -d $CROPDIR ]; then
-	mkdir -p $CROPDIR
-fi
-
-if [ ! -d $RESAMPLEDIR ]; then
-	mkdir -p $RESAMPLEDIR
-fi
-
-
-
+# Make all of our directories if they don't already exist
+DIRS=($FOOTPRINTDIR $MASKDIR $TEMPDIR $CORRECTEDDIR $SUBDIR $CROPDIR $RESAMPLEDIR)
+for DIR in $DIRS; do
+	if [ ! -d $DIR ]; then
+		mkdir -p $DIR
+	fi
+done
 
 # make sure we have a template image, if not, get the first one
 if [ -z "$TEMPLATE" ]; then
