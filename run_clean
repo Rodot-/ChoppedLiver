@@ -39,8 +39,9 @@ RESAMPLEDIR=$BASEDIR/resample
 
 # Make all of our directories if they don't already exist
 DIRS=($FOOTPRINTDIR $MASKDIR $TEMPDIR $CORRECTEDDIR $SUBDIR $CROPDIR $RESAMPLEDIR)
-for DIR in $DIRS; do
+for DIR in "${DIRS[@]}"; do
 	if [ ! -d $DIR ]; then
+		echo "Making Directory $DIR"
 		mkdir -p $DIR
 	fi
 done
@@ -89,13 +90,13 @@ echo "Applying Master Footprint"
 # apply the common mask to the crop dir
 ./apply_square_mask -o "$CROPDIR" -m "$COMMONMASK" -s crop $CORRECTEDDIR/*.fits
 
-echo "Calculating Stats"
+# Model the PSF using Gemseeing to get a better SEEING value
+./model_psf -g -v $CROPDIR/*.fits;
+
 # calculate some stats and parameters and add them to the headers
+echo "Calculating Stats"
 ./get_stats $CROPDIR/*.fits
 
-for i in $CROPDIR/*.fits; do
-	./model_psf -v $i;
-done;
 # now we'll run hotpants to do image subtraction
 #for image in $OBJECTS
 #do

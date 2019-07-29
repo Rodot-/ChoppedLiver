@@ -121,11 +121,21 @@ def build_psf(filename, box_size=25, oversampling=4):
 			
 			plt.show()
 
+def build_psf_gemseeing(imagename, verbose=True):
+
+	verbose = bool(verbose)
+	from pyraf import iraf
+	from pyraf.iraf import gemini, gemtools
+	gemtools.gemseeing(imagename, fl_keep=False, verbose=True, fl_update=True, fl_strehl=False, key_ron="READNOIS", key_gain="GAIN", pixscale=0.15*2, fwhmin=3.0, datamax=45000, fl_overwrite=True)
+	
+
 if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-s', '--show', help='Show Plots of ePSF, Star Locations, and Model',
 						dest='plot', action='store_true')
+	parser.add_argument('-g', '--gemseeing', help='Measure the PSF with Gemseeing instead',
+						dest='gemsee', action='store_true')
 	parser.add_argument('-v', '--verbose', help='Verbosity Level', dest='verbosity', default=0, action='store_const', const=1)
 	parser.add_argument('files', help='Input Fits File(s)', type=str, nargs='+')
 
@@ -135,6 +145,9 @@ if __name__ == '__main__':
 
 	for f in args.files:
 		try:
-			build_psf(f, box_size=25, oversampling=4)
+			if args.gemsee:
+				build_psf_gemseeing(f, VERBOSITY)
+			else:
+				build_psf(f, box_size=25, oversampling=4)
 		except Exception as e:
 			print(e, file=sys.stderr)
