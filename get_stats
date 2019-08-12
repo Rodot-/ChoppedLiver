@@ -22,9 +22,11 @@ def add_stats(filename):
 		f[0].header['MEAN'] = np.nanmean(image)
 		f[0].header['RMS'] = np.sqrt(np.nanmean(image**2))
 		f[0].header['STD'] = np.nanstd(image)
+		f[0].header['FWHM'] = f[0].header['FWHMPSF']/0.3 # 2x2 binning at 0.15 arcsec/pix
 
 		if 'SEEING' not in f[0].header or f[0].header['SEEING'] > 100:
-			f[0].header['SEEING'] = (2.0, "No SEEING param found, this is fudged")
+			#f[0].header['SEEING'] = (2.0, "No SEEING param found, this is fudged")
+			f[0].header['SEEING'] = f[0].header['FWHM']
 		seeing = f[0].header['SEEING']
 
 		f[0].header['HALFMESH'] = int(2.5*seeing+0.5)
