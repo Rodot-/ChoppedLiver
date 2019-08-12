@@ -8,23 +8,29 @@ from astropy.io import fits
 import numpy as np
 
 
+def percent(f):
+
+	return ("{:<03.2%}".format(f)).zfill(6)
+
 def get_params(filename):
-	im = np.array(fits.getdata(filename, 0))
-	total = len(im.ravel())
-	nans = np.sum(np.isnan(im.ravel()))
-	nansp = nans/total
-	negs = np.sum(im.ravel() < 0)
-	negsp = negs/total
-	zeros = np.sum(im.ravel() == 0)
-	zerosp = zeros/total
-	infs = np.sum(np.isinf(im.ravel()))
-	infsp = infs/total
+	im = np.array(fits.getdata(filename, 0)).ravel()
+	total = len(im)
+	nanmask = np.isnan(im)
+	nans = np.sum(nanmask)
+	nansp = percent(nans/total)
+	im = im[~nanmask]
+	negs = np.sum(im < 0)
+	negsp = percent(negs/total)
+	zeros = np.sum(im == 0)
+	zerosp = percent(zeros/total)
+	infs = np.sum(np.isinf(im))
+	infsp = percent(infs/total)
 	filename = filename[filename.rfind('/')+1:]
-	return f'{filename:<28} {nans:<7d} {nansp:<2.2%} {zeros:<7d} {zerosp:<2.2%} {negs:<7d} {negsp:<2.2%} {infs:<7d} {infsp:<2.2%}'
+	return f'{filename:<28} {nans:<7d} {nansp:<6} {zeros:<7d} {zerosp:<6} {negs:<7d} {negsp:<6} {infs:<7d} {infsp:<6}'
 	
 
 P = Pool(16)
-print('Filename     | NaNs | Zeros | Negatives | Infinities')
+print('{0:<28} {1:<14} {2:<14} {3:<14} {4:<14}'.format('Filename','NaNs','Zeros','Negatives','Infinities'))
 for i in P.imap(get_params, sys.argv[1:]):
 	print(i)
 
