@@ -33,8 +33,10 @@ def reproject(template, image, exact=False):
 	with fits.open(image) as f:
 
 		header = fits.getheader(template)
+		shape = (header['NAXIS1'], header['NAXIS2'])
+		#shape = (2048, 2056)
 		frame = WCS(header) # template coordinate information
-		array, footprint = reprojector(f[0], frame, shape_out=f[0].data.shape)
+		array, footprint = reprojector(f[0], frame, shape_out=shape)
 		new_header = f[0].header # copy old header
 		new_header.update(frame.to_header()) # new wcs info
 
