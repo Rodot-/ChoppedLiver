@@ -57,7 +57,7 @@ OBJECTS="$(cat $OBSFILE)" # get the locations of all of our objects
 RAW_FILES=$(for image in $OBJECTS; do echo "$RAWDIR/$image"; done)
 
 # do good WCS projection with swarp (make sure you've got a good default config)
-swarp $RAW_FILES -RESAMPLE_DIR $RESAMPLEDIR -COMBINE N
+swarp $RAW_FILES -RESAMPLE_DIR $RESAMPLEDIR -COMBINE N &&
 
 for image in $OBJECTS
 do
@@ -73,10 +73,10 @@ do
 		echo "  $IMAGENAME"; # imagename
 
 		# perform projection
-		./reproject_image -t $TEMPLATE -o "$TEMPDIR/$BASENAME" -m "$FOOTPRINT" "$RESAMPLED"
+		./reproject_image -t $TEMPLATE -o "$TEMPDIR/$BASENAME" -m "$FOOTPRINT" "$RESAMPLED" &&
 
 		# get rid of cosmics
-		./remove_cosmics -o "$OUTFILE" -m "$MASK" -f "$FOOTPRINT" "$TEMPDIR/$BASENAME"
+		./remove_cosmics -o "$OUTFILE" -m "$MASK" -f "$FOOTPRINT" "$TEMPDIR/$BASENAME" &&
 
 	fi
 done
@@ -84,18 +84,18 @@ done
 # find the area containing data for all images
 echo "Generating Master Footprint"
 COMMONMASK="$FOOTPRINTDIR/${BASEDIR}.fits"
-./master_crop -o "$COMMONMASK" $FOOTPRINTDIR/h_e*.fits
+./master_crop -o "$COMMONMASK" $FOOTPRINTDIR/h_e*.fits &&
 
 echo "Applying Master Footprint"
 # apply the common mask to the crop dir
-./apply_square_mask -o "$CROPDIR" -m "$COMMONMASK" -s crop $CORRECTEDDIR/*.fits
+./apply_square_mask -o "$CROPDIR" -m "$COMMONMASK" -s crop $CORRECTEDDIR/*.fits &&
 
 # Model the PSF using Gemseeing to get a better SEEING value
-./model_psf -g -v $CROPDIR/*.fits;
+./model_psf -g -v $CROPDIR/*.fits &&
 
 # calculate some stats and parameters and add them to the headers
 echo "Calculating Stats"
-./get_stats $CROPDIR/*.fits
+./get_stats $CROPDIR/*.fits &&
 
 # now we'll run hotpants to do image subtraction
 #for image in $OBJECTS
