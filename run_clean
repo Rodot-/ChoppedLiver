@@ -76,7 +76,7 @@ do
 		./reproject_image -t $TEMPLATE -o "$TEMPDIR/$BASENAME" -m "$FOOTPRINT" "$RESAMPLED" &&
 
 		# get rid of cosmics
-		./remove_cosmics -o "$OUTFILE" -m "$MASK" -f "$FOOTPRINT" "$TEMPDIR/$BASENAME" &&
+		./remove_cosmics -o "$OUTFILE" -m "$MASK" -f "$FOOTPRINT" "$TEMPDIR/$BASENAME" 
 
 	fi
 done
